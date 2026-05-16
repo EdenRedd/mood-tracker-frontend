@@ -2,11 +2,12 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
-    "mood-tracker": {
+    "Replace me with actual name": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -56,10 +57,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "mood-tracker:build:production"
+              "buildTarget": "Replace me with actual name:build:production"
             },
             "development": {
-              "buildTarget": "mood-tracker:build:development"
+              "buildTarget": "Replace me with actual name:build:development"
             }
           },
           "defaultConfiguration": "development"
