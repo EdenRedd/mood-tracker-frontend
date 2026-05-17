@@ -7,6 +7,7 @@ interface CalendarDay {
   currentMonth: boolean;
   today: boolean;
   mood?: 'happy' | 'neutral' | 'sad';
+  logged: boolean;
   key?: string;
 }
 
@@ -86,6 +87,15 @@ export class App {
     this.year.set(now.getFullYear());
   }
 
+  protected onScroll(event: WheelEvent) {
+    event.preventDefault();
+    if (event.deltaY > 0) {
+      this.nextMonth();
+    } else if (event.deltaY < 0) {
+      this.previousMonth();
+    }
+  }
+
   private pad(n: number) {
     return String(n).padStart(2, '0');
   }
@@ -150,15 +160,15 @@ export class App {
           month === today.getMonth() &&
           displayDate === today.getDate();
 
-        const mood = currentMonth
-          ? this.getMoodForDate(year, month, displayDate) ?? 'happy'
-          : undefined;
+        const actualMood = currentMonth ? this.getMoodForDate(year, month, displayDate) : undefined;
+        const mood = currentMonth ? actualMood ?? 'happy' : undefined;
 
         weekDays.push({
           label: displayDate,
           currentMonth,
           today: isToday,
           mood,
+          logged: currentMonth && actualMood !== undefined,
           key: currentMonth ? this.keyFor(year, month, displayDate) : undefined
         });
       }

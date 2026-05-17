@@ -103,6 +103,9 @@
   }
 
   .date-cell.current-month {
+  }
+
+  .date-cell.clickable {
     cursor: pointer;
   }
 
@@ -229,7 +232,7 @@
 </style>
 
 <main class="calendar-shell">
-  <section class="calendar-card">
+  <section class="calendar-card" (wheel)="onScroll($event)">
     <header class="calendar-header">
       <div>
         <p class="calendar-subtitle">Mood tracker calendar</p>
@@ -252,6 +255,7 @@
           [class.other-month]="!day.currentMonth"
           [class.today]="day.today"
           [class.current-month]="day.currentMonth"
+          [class.clickable]="day.currentMonth"
           [class.selected]="day.key === selectedDate()"
           (click)="selectDay(day)"
         >
