@@ -120,6 +120,23 @@
     background: rgba(59, 130, 246, 0.08);
   }
 
+  .exit-button {
+    margin-left: 0.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: transparent;
+    color: #ef4444;
+    border-radius: 0.75rem;
+    padding: 0.7rem 0.9rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .exit-button:hover {
+    background: #fff1f2;
+    transform: translateY(-1px);
+  }
+
   @media (max-width: 520px) {
     :host {
       padding: 1rem;
@@ -172,6 +189,7 @@
 
     <footer class="calendar-footer">
       <button type="button" class="today-button" (click)="resetToday()">Today!</button>
+      <button type="button" class="exit-button" routerLink="/login">Exit to login</button>
     </footer>
   </section>
 </main>

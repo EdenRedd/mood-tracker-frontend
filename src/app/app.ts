@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 interface CalendarDay {
   label: number;
@@ -10,7 +11,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
