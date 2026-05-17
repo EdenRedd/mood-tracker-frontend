@@ -6,6 +6,8 @@ interface CalendarDay {
   label: number;
   currentMonth: boolean;
   today: boolean;
+  mood?: 'happy' | 'neutral' | 'sad';
+  key?: string;
 }
 
 @Component({
@@ -37,7 +39,29 @@ export class App {
 
   protected readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  protected readonly moods = signal(new Map<string, 'happy' | 'neutral' | 'sad'>());
+  protected readonly selectedDate = signal<string | null>(null);
+  protected readonly moodModalOpen = signal(false);
+
+  protected readonly selectedMood = computed(() =>
+    this.selectedDate() ? this.moods().get(this.selectedDate()!) : undefined
+  );
+
   protected readonly monthName = computed(() => this.monthNames[this.month()]);
+
+  constructor() {
+    const y = this.year();
+    const m = this.month();
+
+    this.moods.set(
+      new Map([
+        [this.keyFor(y, m, 3), 'happy'],
+        [this.keyFor(y, m, 7), 'neutral'],
+        [this.keyFor(y, m, 12), 'sad'],
+        [this.keyFor(y, m, this.today().getDate()), 'happy']
+      ])
+    );
+  }
 
   protected readonly calendar = computed(() =>
     this.buildCalendar(this.year(), this.month(), this.today())
@@ -60,6 +84,44 @@ export class App {
     this.today.set(now);
     this.month.set(now.getMonth());
     this.year.set(now.getFullYear());
+  }
+
+  private pad(n: number) {
+    return String(n).padStart(2, '0');
+  }
+
+  private keyFor(y: number, m: number, d: number) {
+    return `${y}-${this.pad(m + 1)}-${this.pad(d)}`;
+  }
+
+  private getMoodForDate(y: number, m: number, d: number) {
+    return this.moods().get(this.keyFor(y, m, d));
+  }
+
+  protected selectDay(day: CalendarDay) {
+    if (!day.currentMonth || !day.key) {
+      return;
+    }
+
+    this.selectedDate.set(day.key);
+    this.moodModalOpen.set(true);
+  }
+
+  protected saveEntry(mood: 'happy' | 'neutral' | 'sad') {
+    const selected = this.selectedDate();
+    if (!selected) {
+      return;
+    }
+
+    const updated = new Map(this.moods());
+    updated.set(selected, mood);
+    this.moods.set(updated);
+    this.closeModal();
+  }
+
+  protected closeModal() {
+    this.moodModalOpen.set(false);
+    this.selectedDate.set(null);
   }
 
   private buildCalendar(year: number, month: number, today: Date): CalendarDay[][] {
@@ -88,10 +150,16 @@ export class App {
           month === today.getMonth() &&
           displayDate === today.getDate();
 
+        const mood = currentMonth
+          ? this.getMoodForDate(year, month, displayDate) ?? 'happy'
+          : undefined;
+
         weekDays.push({
           label: displayDate,
           currentMonth,
-          today: isToday
+          today: isToday,
+          mood,
+          key: currentMonth ? this.keyFor(year, month, displayDate) : undefined
         });
       }
 

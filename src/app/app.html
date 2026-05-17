@@ -94,6 +94,7 @@
     color: #111827;
     font-weight: 500;
     background: #f8fafc;
+    position: relative;
   }
 
   .date-cell.other-month {
@@ -101,10 +102,79 @@
     background: transparent;
   }
 
+  .date-cell.current-month {
+    cursor: pointer;
+  }
+
+  .date-cell.selected {
+    box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.55);
+  }
+
   .date-cell.today {
     background: #2563eb;
     color: white;
     box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
+  }
+
+  .date-number {
+    z-index: 1;
+  }
+
+  .mood-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.5rem;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  }
+
+  .mood-dot[data-mood="happy"] { background: #10b981; }
+  .mood-dot[data-mood="neutral"] { background: #f59e0b; }
+  .mood-dot[data-mood="sad"] { background: #ef4444; }
+
+  .mood-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .today-button.active {
+    background: #2563eb;
+    color: white;
+    border-color: rgba(37, 99, 235, 0.4);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    z-index: 10;
+  }
+
+  .modal {
+    width: min(100%, 420px);
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .modal-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: #111827;
+  }
+
+  .modal-close-button {
+    margin-top: 1rem;
+    width: 100%;
   }
 
   .calendar-footer {
@@ -181,10 +251,51 @@
           *ngFor="let day of week"
           [class.other-month]="!day.currentMonth"
           [class.today]="day.today"
+          [class.current-month]="day.currentMonth"
+          [class.selected]="day.key === selectedDate()"
+          (click)="selectDay(day)"
         >
-          {{ day.label }}
+          <div class="date-number">{{ day.label }}</div>
+          <div *ngIf="day.mood" class="mood-dot" [attr.data-mood]="day.mood" [title]="day.mood"></div>
         </div>
       </ng-container>
+    </div>
+
+    <div class="modal-backdrop" *ngIf="moodModalOpen()" (click)="closeModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <p class="modal-title">Pick your mood for <strong>{{ selectedDate() }}</strong></p>
+
+        <div class="mood-options">
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'happy'"
+            (click)="saveEntry('happy')"
+          >
+            Happy
+          </button>
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'neutral'"
+            (click)="saveEntry('neutral')"
+          >
+            Neutral
+          </button>
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'sad'"
+            (click)="saveEntry('sad')"
+          >
+            Sad
+          </button>
+        </div>
+
+        <button type="button" class="exit-button modal-close-button" (click)="closeModal()">
+          Cancel
+        </button>
+      </div>
     </div>
 
     <footer class="calendar-footer">
