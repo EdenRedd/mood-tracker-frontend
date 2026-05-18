@@ -140,15 +140,45 @@
   .mood-dot[data-mood="happy"] { background: #10b981; }
   .mood-dot[data-mood="neutral"] { background: #f59e0b; }
   .mood-dot[data-mood="sad"] { background: #ef4444; }
-  .mood-dot[data-mood="stressed"] { background: #8b5cf6; }
-  .mood-dot[data-mood="depressed"] { background: #1e3a8a; }
-  .mood-dot[data-mood="anxious"] { background: #06b6d4; }
 
   .mood-options {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 0.5rem;
+  }
+
+  .custom-emotions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .custom-emotion-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .custom-remove-button {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    color: #dc2626;
+    background: white;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .custom-remove-button:hover {
+    background: #fee2e2;
   }
 
   .today-button.active {
@@ -302,43 +332,27 @@
             Sad
           </button>
 
-          <button
-            type="button"
-            class="today-button"
-            [class.active]="selectedMood() === 'stressed'"
-            (click)="saveEntry('stressed')"
-          >
-            Stressed
-          </button>
-
-          <button
-            type="button"
-            class="today-button"
-            [class.active]="selectedMood() === 'depressed'"
-            (click)="saveEntry('depressed')"
-          >
-            Depressed
-          </button>
-
-          <button
-            type="button"
-            class="today-button"
-            [class.active]="selectedMood() === 'anxious'"
-            (click)="saveEntry('anxious')"
-          >
-            Anxious
-          </button>
-
           <!-- Custom emotions list -->
-          <button
-            *ngFor="let em of customEmotions()"
-            type="button"
-            class="today-button"
-            [class.active]="selectedMood() === em"
-            (click)="saveEntry(em)"
-          >
-            {{ em }}
-          </button>
+          <div class="custom-emotions-list">
+            <div *ngFor="let em of customEmotions()" class="custom-emotion-row">
+              <button
+                type="button"
+                class="today-button"
+                [class.active]="selectedMood() === em"
+                (click)="saveEntry(em)"
+              >
+                {{ em }}
+              </button>
+              <button
+                type="button"
+                class="custom-remove-button"
+                title="Remove custom mood"
+                (click)="removeCustomEmotion(em); $event.stopPropagation()"
+              >
+                ×
+              </button>
+            </div>
+          </div>
 
           <!-- Input for creating a custom emotion -->
           <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem;width:100%">
@@ -361,14 +375,18 @@
 
     <footer class="calendar-footer">
       <button type="button" class="today-button" (click)="resetToday()">Today!</button>
+      <button type="button" class="today-button" (click)="toggleChart()">
+        {{ chartVisible() ? 'Hide month chart' : 'Show month chart' }}
+      </button>
       <button type="button" class="today-button" (click)="logCurrentMood()">Log mood</button>
       <button type="button" class="exit-button" routerLink="/login">Exit to login</button>
     </footer>
   </section>
 
-  <app-mood-pie-chart 
-    [moods]="moods()" 
-    [month]="month()" 
+  <app-mood-pie-chart
+    *ngIf="chartVisible()"
+    [moods]="moods()"
+    [month]="month()"
     [year]="year()"
   ></app-mood-pie-chart>
 </main>

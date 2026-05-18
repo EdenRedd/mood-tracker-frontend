@@ -7,9 +7,6 @@ interface MoodStats {
   happy: number;
   neutral: number;
   sad: number;
-  stressed: number;
-  depressed: number;
-  anxious: number;
   other: number;
 }
 
@@ -40,18 +37,6 @@ interface MoodStats {
         <div class="stat-item sad">
           <span class="dot"></span>
           <span>Sad: {{ stats().sad }}</span>
-        </div>
-        <div class="stat-item stressed">
-          <span class="dot"></span>
-          <span>Stressed: {{ stats().stressed }}</span>
-        </div>
-        <div class="stat-item depressed">
-          <span class="dot"></span>
-          <span>Depressed: {{ stats().depressed }}</span>
-        </div>
-        <div class="stat-item anxious">
-          <span class="dot"></span>
-          <span>Anxious: {{ stats().anxious }}</span>
         </div>
         <div class="stat-item other">
           <span class="dot"></span>
@@ -136,12 +121,12 @@ export class MoodPieChart {
     const moodMap = this.moods();
     const m = this.month();
     const y = this.year();
-    const stats: MoodStats = { happy: 0, neutral: 0, sad: 0, stressed: 0, depressed: 0, anxious: 0, other: 0 };
+    const stats: MoodStats = { happy: 0, neutral: 0, sad: 0, other: 0 };
 
     moodMap.forEach((mood, key) => {
       const [year, month, day] = key.split('-').map(Number);
       if (year === y && month === m + 1) {
-        if (mood === 'happy' || mood === 'neutral' || mood === 'sad' || mood === 'stressed' || mood === 'depressed' || mood === 'anxious') {
+        if (mood === 'happy' || mood === 'neutral' || mood === 'sad') {
           // @ts-ignore
           stats[mood]++;
         } else {
@@ -155,15 +140,15 @@ export class MoodPieChart {
 
   chartData = computed(() => {
     const s = this.stats();
-    const total = s.happy + s.neutral + s.sad + s.stressed + s.depressed + s.anxious + s.other;
+    const total = s.happy + s.neutral + s.sad + s.other;
 
     return {
-      labels: ['Happy', 'Neutral', 'Sad', 'Stressed', 'Depressed', 'Anxious', 'Other'],
+      labels: ['Happy', 'Neutral', 'Sad', 'Other'],
       datasets: [
         {
-          data: [s.happy, s.neutral, s.sad, s.stressed, s.depressed, s.anxious, s.other],
-          backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#1e3a8a', '#06b6d4', '#9ca3af'],
-          borderColor: ['#059669', '#d97706', '#dc2626', '#6d28d9', '#12205e', '#0e7490', '#6b7280'],
+          data: [s.happy, s.neutral, s.sad, s.other],
+          backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#9ca3af'],
+          borderColor: ['#059669', '#d97706', '#dc2626', '#6b7280'],
           borderWidth: 2,
           hoverBorderWidth: 3,
           hoverOffset: 4

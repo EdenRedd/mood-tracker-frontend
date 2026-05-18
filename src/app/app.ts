@@ -46,6 +46,7 @@ export class App {
   protected readonly moodModalOpen = signal(false);
   protected readonly customEmotions = signal<string[]>([]);
   protected readonly customEmotionInput = signal('');
+  protected readonly chartVisible = signal(false);
 
   protected readonly selectedMood = computed(() =>
     this.selectedDate() ? this.moods().get(this.selectedDate()!) : undefined
@@ -127,7 +128,6 @@ export class App {
     this.moodModalOpen.set(true);
   }
 
-  protected saveEntry(mood: 'happy' | 'neutral' | 'sad') {
   protected saveEntry(mood: string) {
     const selected = this.selectedDate();
     if (!selected) {
@@ -158,6 +158,15 @@ export class App {
 
     this.saveEntry(name);
     this.customEmotionInput.set('');
+  }
+
+  protected removeCustomEmotion(emotion: string) {
+    const current = [...this.customEmotions()];
+    this.customEmotions.set(current.filter((em) => em !== emotion));
+  }
+
+  protected toggleChart() {
+    this.chartVisible.set(!this.chartVisible());
   }
 
   protected closeModal() {
