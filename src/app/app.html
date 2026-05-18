@@ -12,17 +12,20 @@
   .calendar-shell {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     min-height: 100%;
+    gap: 1.5rem;
+    flex-wrap: wrap;
   }
 
   .calendar-card {
     width: min(100%, 520px);
-    background: white;
+    background: #eff6ff;
     border-radius: 1.25rem;
     box-shadow: 0 24px 72px rgba(15, 23, 42, 0.08);
     padding: 1.5rem;
     border: 1px solid rgba(37, 99, 235, 0.24);
+    flex-shrink: 0;
   }
 
   .calendar-header {
@@ -131,11 +134,15 @@
     right: 0.6rem;
     bottom: 0.5rem;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+    background: #9ca3af; /* default color for custom/other emotions */
   }
 
   .mood-dot[data-mood="happy"] { background: #10b981; }
   .mood-dot[data-mood="neutral"] { background: #f59e0b; }
   .mood-dot[data-mood="sad"] { background: #ef4444; }
+  .mood-dot[data-mood="stressed"] { background: #8b5cf6; }
+  .mood-dot[data-mood="depressed"] { background: #1e3a8a; }
+  .mood-dot[data-mood="anxious"] { background: #06b6d4; }
 
   .mood-options {
     display: flex;
@@ -260,7 +267,7 @@
           (click)="selectDay(day)"
         >
           <div class="date-number">{{ day.label }}</div>
-          <div *ngIf="day.mood" class="mood-dot" [attr.data-mood]="day.mood" [title]="day.mood"></div>
+          <div *ngIf="day.logged" class="mood-dot" [attr.data-mood]="day.mood" [title]="day.mood"></div>
         </div>
       </ng-container>
     </div>
@@ -294,6 +301,56 @@
           >
             Sad
           </button>
+
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'stressed'"
+            (click)="saveEntry('stressed')"
+          >
+            Stressed
+          </button>
+
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'depressed'"
+            (click)="saveEntry('depressed')"
+          >
+            Depressed
+          </button>
+
+          <button
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === 'anxious'"
+            (click)="saveEntry('anxious')"
+          >
+            Anxious
+          </button>
+
+          <!-- Custom emotions list -->
+          <button
+            *ngFor="let em of customEmotions()"
+            type="button"
+            class="today-button"
+            [class.active]="selectedMood() === em"
+            (click)="saveEntry(em)"
+          >
+            {{ em }}
+          </button>
+
+          <!-- Input for creating a custom emotion -->
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem;width:100%">
+            <input
+              type="text"
+              placeholder="Create custom emotion"
+              [value]="customEmotionInput()"
+              (input)="customEmotionInput.set($any($event.target).value)"
+              style="flex:1;padding:0.6rem;border-radius:0.5rem;border:1px solid rgba(15,23,42,0.08)"
+            />
+            <button type="button" class="today-button" (click)="saveCustomEmotion()">Add</button>
+          </div>
         </div>
 
         <button type="button" class="exit-button modal-close-button" (click)="closeModal()">
@@ -304,7 +361,14 @@
 
     <footer class="calendar-footer">
       <button type="button" class="today-button" (click)="resetToday()">Today!</button>
+      <button type="button" class="today-button" (click)="logCurrentMood()">Log mood</button>
       <button type="button" class="exit-button" routerLink="/login">Exit to login</button>
     </footer>
   </section>
+
+  <app-mood-pie-chart 
+    [moods]="moods()" 
+    [month]="month()" 
+    [year]="year()"
+  ></app-mood-pie-chart>
 </main>
