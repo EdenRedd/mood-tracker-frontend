@@ -1,0 +1,11 @@
+{
+  "/api": {
+    "target": "https://zuey8ghnx3.execute-api.us-east-2.amazonaws.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/api": ""
+    }
+  }
+}

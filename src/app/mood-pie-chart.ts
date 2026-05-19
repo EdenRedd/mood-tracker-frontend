@@ -2,6 +2,7 @@ import { Component, input, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
+import { Chart as ChartJS, PieController, ArcElement, Tooltip, Legend } from 'chart.js';
 
 interface MoodStats {
   happy: number;
@@ -113,6 +114,11 @@ interface MoodStats {
   `]
 })
 export class MoodPieChart {
+  constructor() {
+    // Register Chart.js plugins for pie chart support
+    ChartJS.register(PieController, ArcElement, Tooltip, Legend);
+  }
+
   moods = input<Map<string, string>>(new Map());
   month = input<number>(0);
   year = input<number>(2024);

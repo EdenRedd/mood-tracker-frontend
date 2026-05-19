@@ -297,7 +297,13 @@
           (click)="selectDay(day)"
         >
           <div class="date-number">{{ day.label }}</div>
-          <div *ngIf="day.logged" class="mood-dot" [attr.data-mood]="day.mood" [title]="day.mood"></div>
+          <div
+            *ngIf="day.logged"
+            class="mood-dot"
+            [attr.data-mood]="day.mood"
+            [style.background]="getMoodColor(day.mood)"
+            [title]="day.mood"
+          ></div>
         </div>
       </ng-container>
     </div>
