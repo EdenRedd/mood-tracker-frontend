@@ -100,6 +100,20 @@
     position: relative;
   }
 
+  .date-cell[data-mood]:hover::after {
+    content: attr(data-mood);
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.5rem;
+    background: rgba(15, 23, 42, 0.9);
+    color: white;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1;
+  }
+
   .date-cell.other-month {
     color: #9ca3af;
     background: transparent;
@@ -289,6 +303,8 @@
         <div
           class="date-cell"
           *ngFor="let day of week"
+          [attr.data-mood]="day.logged ? day.mood : null"
+          [attr.title]="day.logged ? day.mood : null"
           [class.other-month]="!day.currentMonth"
           [class.today]="day.today"
           [class.current-month]="day.currentMonth"
@@ -302,7 +318,6 @@
             class="mood-dot"
             [attr.data-mood]="day.mood"
             [style.background]="getMoodColor(day.mood)"
-            [title]="day.mood"
           ></div>
         </div>
       </ng-container>

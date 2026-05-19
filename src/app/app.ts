@@ -20,6 +20,12 @@ interface MoodEntry {
   created_at: string;
 }
 
+interface ApiResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -62,18 +68,19 @@ export class App {
 
   private readonly moodApiRoute = 'https://zuey8ghnx3.execute-api.us-east-2.amazonaws.com/mood-tracker';
 
-  private getUserMoodUrl() {
+  private getUserId() {
     const username = this.userService.getUsername().trim();
-    return `${this.moodApiRoute}/users/${encodeURIComponent(`User#${username}`)}/moods`;
+    return username;
   }
 
   private getLoadUrl(date: string) {
-    const params = new URLSearchParams({ date });
-    return `${this.getUserMoodUrl()}?${params.toString()}`;
+    const userId = this.getUserId();
+    const params = new URLSearchParams({ user_id: userId, date });
+    return `${this.moodApiRoute}?${params.toString()}`;
   }
 
   private getSaveUrl() {
-    return this.getUserMoodUrl();
+    return this.moodApiRoute;
   }
 
   protected readonly selectedMood = computed(() =>
@@ -83,23 +90,6 @@ export class App {
   protected readonly monthName = computed(() => this.monthNames[this.month()]);
 
   constructor() {
-    const y = this.year();
-    const m = this.month();
-
-    // Dummy data for pie chart: 8 happy, 2 sad, 1 neutral
-    const dummyMoods = new Map<string, string>();
-    // 8 happy entries
-    for (let i = 1; i <= 8; i++) {
-      dummyMoods.set(this.keyFor(y, m, i), 'happy');
-    }
-    // 2 sad entries
-    dummyMoods.set(this.keyFor(y, m, 9), 'sad');
-    dummyMoods.set(this.keyFor(y, m, 10), 'sad');
-    // 1 neutral entry
-    dummyMoods.set(this.keyFor(y, m, 11), 'neutral');
-
-    this.moods.set(dummyMoods);
-
     void this.initialize();
   }
 
@@ -159,8 +149,11 @@ export class App {
     }
 
     try {
-      const date = this.formatDate(this.today());
-      const url = this.getLoadUrl(date);
+      const monthDate = this.formatMonthDate(this.year(), this.month());
+      const userId = this.getUserId();
+      console.log('Loading moods for', { userId, monthDate });
+      const url = this.getLoadUrl(monthDate);
+      console.log('Fetching moods from:', url);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -172,9 +165,19 @@ export class App {
       }
 
       const data = await response.json();
+      console.log('Backend response data:', data);
       const moodMap = new Map<string, string>();
 
-      if (Array.isArray(data)) {
+      // Handle items array from backend response
+      if (data && typeof data === 'object' && Array.isArray(data.items)) {
+        data.items.forEach((entry: MoodEntry) => {
+          if (!entry.entry_date) {
+            return;
+          }
+          moodMap.set(entry.entry_date, this.normalizeMood(entry.mood));
+        });
+      } else if (Array.isArray(data)) {
+        // Fallback for array response
         data.forEach((entry: MoodEntry) => {
           if (!entry.entry_date) {
             return;
@@ -182,14 +185,21 @@ export class App {
           moodMap.set(entry.entry_date, this.normalizeMood(entry.mood));
         });
       } else if (data && typeof data === 'object' && 'date' in data) {
+        // Fallback for single entry response
         moodMap.set(String(data.date), this.normalizeMood(String((data as any).mood)));
       }
 
+      console.log('Processed mood map:', Object.fromEntries(moodMap));
+
       if (moodMap.size > 0) {
-        // Merge with existing dummy data, prioritizing API data
+        console.log('Setting moods to signal with', moodMap.size, 'entries');
+        // Merge with existing moods to preserve moods from other months
         const merged = new Map(this.moods());
         moodMap.forEach((mood, date) => merged.set(date, mood));
         this.moods.set(merged);
+        console.log('Total moods after merge:', merged.size);
+      } else {
+        console.log('No moods found in backend response');
       }
     } catch (error) {
       console.error('Unable to load mood entries:', error);
@@ -206,12 +216,14 @@ export class App {
     const prev = new Date(this.year(), this.month() - 1, 1);
     this.month.set(prev.getMonth());
     this.year.set(prev.getFullYear());
+    void this.loadMoods();
   }
 
   protected nextMonth() {
     const next = new Date(this.year(), this.month() + 1, 1);
     this.month.set(next.getMonth());
     this.year.set(next.getFullYear());
+    void this.loadMoods();
   }
 
   protected resetToday() {
@@ -219,6 +231,7 @@ export class App {
     this.today.set(now);
     this.month.set(now.getMonth());
     this.year.set(now.getFullYear());
+    void this.loadMoods();
   }
 
   protected onScroll(event: WheelEvent) {
@@ -236,6 +249,10 @@ export class App {
 
   private formatDate(date: Date) {
     return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(date.getDate())}`;
+  }
+
+  private formatMonthDate(year: number, month: number) {
+    return `${year}-${this.pad(month + 1)}`;
   }
 
   private keyFor(y: number, m: number, d: number) {
@@ -262,41 +279,66 @@ export class App {
     this.moodModalOpen.set(true);
   }
 
-  protected saveEntry(mood: string) {
+  protected async saveEntry(mood: string) {
     const selected = this.selectedDate();
     if (!selected) {
       return;
     }
 
+    const exists = this.moods().has(selected);
     const updated = new Map(this.moods());
     updated.set(selected, mood);
     this.moods.set(updated);
 
-    void this.sendMoodToApi(selected, mood);
+    const result = await this.sendMoodToApi(selected, mood, exists);
+    if (!result.success) {
+      console.error('Failed to save mood to API:', result.error);
+    }
+
     this.closeModal();
   }
 
-  private async sendMoodToApi(date: string, mood: string) {
+  private async sendMoodToApi(date: string, mood: string, existingEntry: boolean): Promise<ApiResult> {
+    const userId = this.getUserId();
     try {
-      const payload = {
-        date: String(date),
-        mood: String(mood)
-      };
+      if (!date || !mood || !userId) {
+        throw new Error('date, mood, and userId are required');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      const payload = { user_id: userId, mood: String(mood), date: String(date) };
+      const method = existingEntry ? 'PUT' : 'POST';
+
+      console.log(`Sending ${method} to backend:`, payload);
 
       const response = await fetch(this.getSaveUrl(), {
-        method: 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        console.error(`Failed to save mood to API: ${response.status} ${response.statusText}`);
+        const errorBody = await response.json().catch(() => ({ error: response.statusText }));
+        console.error(`${method} failed:`, response.status, errorBody);
+        throw new Error(`API error: ${response.status} - ${JSON.stringify(errorBody)}`);
       }
+
+      const data = await response.json();
+      console.log(`${method} response:`, data);
+      return { success: true, data };
     } catch (error) {
       console.error('Error saving mood to API:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 
@@ -346,6 +388,8 @@ export class App {
 
   private buildCalendar(year: number, month: number, today: Date): CalendarDay[][] {
     const weeks: CalendarDay[][] = [];
+    const daysWithMood: string[] = [];
+    const daysWithoutMood: string[] = [];
 
     // Start from the first cell in the 6x7 grid; use Date overflow to compute cell dates
     const firstCell = new Date(year, month, 1);
@@ -369,6 +413,14 @@ export class App {
         const actualMood = this.getMoodForDate(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
         const mood = actualMood;
 
+        if (currentMonth) {
+          if (actualMood) {
+            daysWithMood.push(`${displayDate}: ${actualMood}`);
+          } else {
+            daysWithoutMood.push(String(displayDate));
+          }
+        }
+
         weekDays.push({
           label: displayDate,
           currentMonth,
@@ -381,6 +433,12 @@ export class App {
 
       weeks.push(weekDays);
     }
+
+    console.log(`Calendar for ${this.monthNames[month]} ${year}:`, {
+      daysWithMood,
+      daysWithoutMood,
+      totalDaysInMonth: daysWithMood.length + daysWithoutMood.length
+    });
 
     return weeks;
   }

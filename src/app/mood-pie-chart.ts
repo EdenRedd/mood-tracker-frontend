@@ -4,11 +4,10 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { Chart as ChartJS, PieController, ArcElement, Tooltip, Legend } from 'chart.js';
 
-interface MoodStats {
-  happy: number;
-  neutral: number;
-  sad: number;
-  other: number;
+interface MoodSummaryItem {
+  mood: string;
+  count: number;
+  color: string;
 }
 
 @Component({
@@ -27,21 +26,9 @@ interface MoodStats {
         ></canvas>
       </div>
       <div class="mood-stats">
-        <div class="stat-item happy">
-          <span class="dot"></span>
-          <span>Happy: {{ stats().happy }}</span>
-        </div>
-        <div class="stat-item neutral">
-          <span class="dot"></span>
-          <span>Neutral: {{ stats().neutral }}</span>
-        </div>
-        <div class="stat-item sad">
-          <span class="dot"></span>
-          <span>Sad: {{ stats().sad }}</span>
-        </div>
-        <div class="stat-item other">
-          <span class="dot"></span>
-          <span>Other: {{ stats().other }}</span>
+        <div *ngFor="let item of moodSummary()" class="stat-item">
+          <span class="dot" [style.background]="item.color"></span>
+          <span>{{ item.mood === 'other' ? 'Other' : (item.mood | titlecase) }}: {{ item.count }}</span>
         </div>
       </div>
     </div>
@@ -93,18 +80,6 @@ interface MoodStats {
       font-weight: 500;
     }
 
-    .stat-item.happy .dot {
-      background: #10b981;
-    }
-
-    .stat-item.neutral .dot {
-      background: #f59e0b;
-    }
-
-    .stat-item.sad .dot {
-      background: #ef4444;
-    }
-
     .dot {
       width: 12px;
       height: 12px;
@@ -115,7 +90,6 @@ interface MoodStats {
 })
 export class MoodPieChart {
   constructor() {
-    // Register Chart.js plugins for pie chart support
     ChartJS.register(PieController, ArcElement, Tooltip, Legend);
   }
 
@@ -123,38 +97,81 @@ export class MoodPieChart {
   month = input<number>(0);
   year = input<number>(2024);
 
-  stats = computed(() => {
+  private readonly customMoodPalette = [
+    '#8b5cf6',
+    '#ec4899',
+    '#14b8a6',
+    '#fb7185',
+    '#f59e0b',
+    '#3b82f6',
+    '#22c55e',
+    '#e11d48'
+  ];
+
+  private getMoodColor(mood: string): string {
+    if (!mood) {
+      return '#9ca3af';
+    }
+
+    const normalized = mood.trim().toLowerCase();
+    switch (normalized) {
+      case 'happy':
+        return '#10b981';
+      case 'neutral':
+        return '#f59e0b';
+      case 'sad':
+        return '#ef4444';
+      default: {
+        const hash = [...normalized].reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
+        return this.customMoodPalette[hash % this.customMoodPalette.length];
+      }
+    }
+  }
+
+  private normalizeMood(mood: string): string {
+    const normalized = mood?.trim().toLowerCase();
+    return normalized === 'happy' || normalized === 'neutral' || normalized === 'sad' ? normalized : normalized || 'other';
+  }
+
+  moodSummary = computed(() => {
     const moodMap = this.moods();
-    const m = this.month();
-    const y = this.year();
-    const stats: MoodStats = { happy: 0, neutral: 0, sad: 0, other: 0 };
+    const month = this.month();
+    const year = this.year();
+    const counts = new Map<string, number>();
 
     moodMap.forEach((mood, key) => {
-      const [year, month, day] = key.split('-').map(Number);
-      if (year === y && month === m + 1) {
-        if (mood === 'happy' || mood === 'neutral' || mood === 'sad') {
-          // @ts-ignore
-          stats[mood]++;
-        } else {
-          stats.other++;
-        }
+      const [entryYear, entryMonth] = key.split('-').map(Number);
+      if (entryYear === year && entryMonth === month + 1) {
+        const normalizedMood = this.normalizeMood(mood);
+        counts.set(normalizedMood, (counts.get(normalizedMood) ?? 0) + 1);
       }
     });
 
-    return stats;
+    return [...counts.entries()]
+      .map(([mood, count]) => ({ mood, count, color: this.getMoodColor(mood) }))
+      .sort((a, b) => {
+        const order: Record<string, number> = { happy: 1, neutral: 2, sad: 3, other: 4 };
+        const orderA = order[a.mood] ?? 5;
+        const orderB = order[b.mood] ?? 5;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.mood.localeCompare(b.mood);
+      });
   });
 
   chartData = computed(() => {
-    const s = this.stats();
-    const total = s.happy + s.neutral + s.sad + s.other;
+    const summary = this.moodSummary();
 
     return {
-      labels: ['Happy', 'Neutral', 'Sad', 'Other'],
+      labels: summary.map((item) =>
+        item.mood === 'other' ? 'Other' : item.mood.charAt(0).toUpperCase() + item.mood.slice(1)
+      ),
       datasets: [
         {
-          data: [s.happy, s.neutral, s.sad, s.other],
-          backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#9ca3af'],
-          borderColor: ['#059669', '#d97706', '#dc2626', '#6b7280'],
+          data: summary.map((item) => item.count),
+          backgroundColor: summary.map((item) => item.color),
+          borderColor: summary.map((item) => item.color),
           borderWidth: 2,
           hoverBorderWidth: 3,
           hoverOffset: 4
@@ -173,8 +190,8 @@ export class MoodPieChart {
       tooltip: {
         callbacks: {
           label: (context) => {
-            const stats = this.stats();
-            const total = stats.happy + stats.neutral + stats.sad + stats.other;
+            const summary = this.moodSummary();
+            const total = summary.reduce((sum, item) => sum + item.count, 0);
             const value = context.parsed || 0;
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
             return `${context.label}: ${value} (${percentage}%)`;
